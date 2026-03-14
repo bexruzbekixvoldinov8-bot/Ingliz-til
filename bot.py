@@ -22,7 +22,7 @@ def run_server():
 
 # ==================== SOZLAMALAR ====================
 BOT_TOKEN = "7963263075:AAFy0uOwjihtt2YOSy0bZmjXu5CpdVTtfRQ"
-ADMIN_IDS = [7384088509]
+ADMIN_IDS = [7384088509, 0]  # <-- 2-chi admin ID ni shu yerga qo'ying (0 ni o'rniga)
 ADMIN_PASSWORD = "2026"
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None)
@@ -30,6 +30,94 @@ telebot.logger.setLevel("ERROR")
 
 DB_FILE = "database.json"
 LEVELS = ["Starter", "Beginner", "Elementary", "Pre-Intermediate", "Intermediate", "Upper-Intermediate", "Advanced"]
+
+# ==================== ESSENTIAL SO'ZLARI ====================
+VOCABULARY = {
+    "Essential 1": {
+        "Unit 1": [
+            ("hello", "salom"), ("goodbye", "xayr"), ("yes", "ha"), ("no", "yo'q"),
+            ("please", "iltimos"), ("thank you", "rahmat"), ("sorry", "kechirasiz"),
+            ("good", "yaxshi"), ("bad", "yomon"), ("ok", "mayli"),
+        ],
+        "Unit 2": [
+            ("cat", "mushuk"), ("dog", "it"), ("bird", "qush"), ("fish", "baliq"),
+            ("horse", "ot"), ("cow", "sigir"), ("sheep", "qo'y"), ("pig", "cho'chqa"),
+            ("rabbit", "quyon"), ("mouse", "sichqon"),
+        ],
+        "Unit 3": [
+            ("apple", "olma"), ("banana", "banan"), ("orange", "apelsin"), ("grape", "uzum"),
+            ("watermelon", "tarvuz"), ("melon", "qovun"), ("strawberry", "qulupnay"),
+            ("lemon", "limon"), ("pear", "nok"), ("peach", "shaftoli"),
+        ],
+        "Unit 4": [
+            ("mother", "ona"), ("father", "ota"), ("brother", "aka/uka"), ("sister", "opa/singil"),
+            ("grandfather", "bobo"), ("grandmother", "buvi"), ("son", "o'g'il"),
+            ("daughter", "qiz"), ("husband", "er"), ("wife", "xotin"),
+        ],
+        "Unit 5": [
+            ("red", "qizil"), ("blue", "ko'k"), ("green", "yashil"), ("yellow", "sariq"),
+            ("white", "oq"), ("black", "qora"), ("orange", "to'q sariq"), ("pink", "pushti"),
+            ("purple", "binafsha"), ("brown", "jigarrang"),
+        ],
+    },
+    "Essential 2": {
+        "Unit 1": [
+            ("morning", "ertalab"), ("afternoon", "tushdan keyin"), ("evening", "kechqurun"),
+            ("night", "kecha"), ("today", "bugun"), ("tomorrow", "ertaga"),
+            ("yesterday", "kecha"), ("week", "hafta"), ("month", "oy"), ("year", "yil"),
+        ],
+        "Unit 2": [
+            ("school", "maktab"), ("teacher", "o'qituvchi"), ("student", "o'quvchi"),
+            ("book", "kitob"), ("pen", "qalam"), ("pencil", "qo'rg'oshin qalam"),
+            ("notebook", "daftar"), ("desk", "parta"), ("board", "doska"), ("class", "sinf"),
+        ],
+        "Unit 3": [
+            ("house", "uy"), ("room", "xona"), ("kitchen", "oshxona"), ("bedroom", "yotoqxona"),
+            ("bathroom", "hammom"), ("door", "eshik"), ("window", "deraza"),
+            ("floor", "pol"), ("ceiling", "shift"), ("wall", "devor"),
+        ],
+        "Unit 4": [
+            ("eat", "yemoq"), ("drink", "ichmoq"), ("sleep", "uxlamoq"), ("walk", "yurmoq"),
+            ("run", "yugurmoq"), ("sit", "o'tirmoq"), ("stand", "turmoq"),
+            ("read", "o'qimoq"), ("write", "yozmoq"), ("speak", "gapirmoq"),
+        ],
+        "Unit 5": [
+            ("big", "katta"), ("small", "kichik"), ("tall", "baland"), ("short", "past"),
+            ("long", "uzun"), ("wide", "keng"), ("narrow", "tor"), ("heavy", "og'ir"),
+            ("light", "engil"), ("fast", "tez"),
+        ],
+    },
+    "Essential 3": {
+        "Unit 1": [
+            ("airport", "aeroport"), ("station", "vokzal"), ("hospital", "kasalxona"),
+            ("pharmacy", "dorixona"), ("bank", "bank"), ("market", "bozor"),
+            ("restaurant", "restoran"), ("hotel", "mehmonxona"), ("park", "bog'"),
+            ("library", "kutubxona"),
+        ],
+        "Unit 2": [
+            ("doctor", "shifokor"), ("nurse", "hamshira"), ("engineer", "muhandis"),
+            ("lawyer", "advokat"), ("driver", "haydovchi"), ("cook", "oshpaz"),
+            ("farmer", "dehqon"), ("soldier", "askar"), ("police", "politsiyachi"),
+            ("pilot", "uchuvchi"),
+        ],
+        "Unit 3": [
+            ("weather", "ob-havo"), ("sunny", "quyoshli"), ("cloudy", "bulutli"),
+            ("rainy", "yomg'irli"), ("windy", "shamolли"), ("snowy", "qorli"),
+            ("hot", "issiq"), ("cold", "sovuq"), ("warm", "iliq"), ("foggy", "tumanli"),
+        ],
+        "Unit 4": [
+            ("money", "pul"), ("price", "narx"), ("cheap", "arzon"), ("expensive", "qimmat"),
+            ("buy", "sotib olmoq"), ("sell", "sotmoq"), ("pay", "to'lamoq"),
+            ("free", "bepul"), ("discount", "chegirma"), ("receipt", "chek"),
+        ],
+        "Unit 5": [
+            ("happy", "xursand"), ("sad", "xafa"), ("angry", "g'azablangan"),
+            ("tired", "charchagan"), ("hungry", "och"), ("thirsty", "chanqagan"),
+            ("scared", "qo'rqqan"), ("excited", "hayajonlangan"), ("bored", "zerikkan"),
+            ("surprised", "hayron"),
+        ],
+    },
+}
 
 # ==================== DATABASE ====================
 def load_db():
@@ -39,7 +127,7 @@ def load_db():
                 return json.load(f)
             except:
                 pass
-    return {"users": {}, "tests": [], "results": {}, "attendance": {}, "homeworks": {}}
+    return {"users": {}, "tests": [], "results": {}, "attendance": {}, "homeworks": {}, "vocab_progress": {}}
 
 def save_db(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
@@ -48,6 +136,7 @@ def save_db(data):
 user_states = {}
 user_data = {}
 test_states = {}
+vocab_states = {}
 
 # ==================== YORDAMCHI ====================
 def is_admin(user_id):
@@ -74,7 +163,7 @@ def main_menu(user_id):
     else:
         markup.add("📝 Test yechish", "📊 Natijalarim")
         markup.add("✅ Keldim", "📚 Uy vazifa topshirish")
-        markup.add("ℹ️ Profil")
+        markup.add("📖 So'z o'rganish", "ℹ️ Profil")
     return markup
 
 # ==================== START ====================
@@ -84,7 +173,6 @@ def start(message):
     first_name = message.from_user.first_name or "Foydalanuvchi"
     db = load_db()
     uid = str(user_id)
-
     if uid in db["users"]:
         name = db["users"][uid]["name"]
         role = "Admin" if db["users"][uid].get("role") == "admin" else "O'quvchi"
@@ -159,7 +247,6 @@ def reg_get_contact(message):
     save_db(db)
     user_states.pop(user_id, None)
     user_data.pop(user_id, None)
-
     if role == "admin":
         user_states[user_id] = "waiting_admin_password"
         bot.send_message(
@@ -198,7 +285,6 @@ def admin_teachers(message):
     if not is_admin(message.from_user.id):
         return
     name = get_name(message.from_user.id)
-    # Hozircha o'qituvchilar ro'yxati adminda, kelajakda kengaytirish mumkin
     bot.send_message(
         message.chat.id,
         f"👨‍🏫 *{name}*, o'qituvchilar bo'limi:\n\n"
@@ -215,11 +301,9 @@ def admin_students_list(message):
         return
     db = load_db()
     students = [(uid, u) for uid, u in db["users"].items() if u.get("role") == "student"]
-
     if not students:
         bot.send_message(message.chat.id, "Hali o'quvchilar ro'yxatdan o'tmagan.", reply_markup=main_menu(message.from_user.id))
         return
-
     text = f"👨‍🎓 *O'quvchilar ro'yxati* ({len(students)} kishi):\n\n"
     for i, (uid, u) in enumerate(students, 1):
         text += (
@@ -233,10 +317,8 @@ def admin_students_list(message):
 @bot.message_handler(func=lambda m: m.text == "📊 Statistika")
 def admin_stats(message):
     if not is_admin(message.from_user.id):
-        # O'quvchi uchun natijalar
         show_my_results(message)
         return
-
     db = load_db()
     students = [u for u in db["users"].values() if u.get("role") == "student"]
     total_tests = len(db["tests"])
@@ -244,10 +326,8 @@ def admin_stats(message):
     total_homeworks = sum(len(v) for v in db["homeworks"].values()) if db.get("homeworks") else 0
     today = str(date.today())
     today_attendance = sum(
-        1 for att in db.get("attendance", {}).values()
-        if today in att
+        1 for att in db.get("attendance", {}).values() if today in att
     )
-
     text = (
         f"📊 *Umumiy Statistika:*\n\n"
         f"👨‍🎓 O'quvchilar: *{len(students)}* kishi\n"
@@ -265,21 +345,17 @@ def admin_homeworks(message):
         return
     db = load_db()
     homeworks = db.get("homeworks", {})
-
     all_hw = []
     for uid, hw_list in homeworks.items():
         user_name = db["users"].get(uid, {}).get("name", "Noma'lum")
         for hw in hw_list:
             all_hw.append((user_name, hw))
-
     if not all_hw:
         bot.send_message(message.chat.id, "📭 Hali uy vazifasi topshirilmagan.", reply_markup=main_menu(message.from_user.id))
         return
-
     text = f"📥 *Kelgan Uy Vazifalari* ({len(all_hw)} ta):\n\n"
     for i, (name, hw) in enumerate(all_hw, 1):
         text += f"{i}. *{name}*:\n{hw['text']}\n📅 {hw.get('date', '')}\n\n"
-
     bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=main_menu(message.from_user.id))
 
 # ==================== ADMIN: TEST QO'SHISH ====================
@@ -311,7 +387,6 @@ def admin_test_option(message):
     state = user_states[user_id]
     opt_num = int(state.replace("admin_test_opt", ""))
     user_data[user_id]["questions"][-1]["options"].append(message.text.strip())
-
     if opt_num < 4:
         user_states[user_id] = f"admin_test_opt{opt_num + 1}"
         bot.send_message(message.chat.id, f"{opt_num + 1}️⃣ {opt_num + 1}-variantni kiriting:")
@@ -465,10 +540,8 @@ def student_attendance(message):
     uid = str(user_id)
     today = str(date.today())
     name = get_name(user_id)
-
     if uid not in db["attendance"]:
         db["attendance"][uid] = []
-
     if today in db["attendance"][uid]:
         bot.send_message(
             message.chat.id,
@@ -504,20 +577,183 @@ def student_homework_submit(message):
     uid = str(user_id)
     name = get_name(user_id)
     today = str(date.today())
-
     if uid not in db["homeworks"]:
         db["homeworks"][uid] = []
-
     db["homeworks"][uid].append({"text": message.text, "date": today})
     save_db(db)
     user_states.pop(user_id, None)
-
     bot.send_message(
         message.chat.id,
         f"✅ *{name}*, uy vazifangiz muvaffaqiyatli topshirildi!\n📅 Sana: {today}",
         parse_mode="Markdown",
         reply_markup=main_menu(user_id)
     )
+
+# ==================== SO'Z O'RGANISH: BOSHLASH ====================
+@bot.message_handler(func=lambda m: m.text == "📖 So'z o'rganish")
+def vocab_start(message):
+    user_id = message.from_user.id
+    name = get_name(user_id)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for book in VOCABULARY.keys():
+        markup.add(book)
+    markup.add("🏠 Asosiy menyu")
+    user_states[user_id] = "vocab_choose_book"
+    bot.send_message(
+        message.chat.id,
+        f"📚 *{name}*, qaysi kitobdan o'rganmoqchisiz?",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
+
+# ==================== SO'Z O'RGANISH: KITOB TANLASH ====================
+@bot.message_handler(func=lambda m: user_states.get(m.from_user.id) == "vocab_choose_book")
+def vocab_choose_book(message):
+    user_id = message.from_user.id
+    if message.text == "🏠 Asosiy menyu":
+        user_states.pop(user_id, None)
+        bot.send_message(message.chat.id, "Asosiy menyu:", reply_markup=main_menu(user_id))
+        return
+    if message.text not in VOCABULARY:
+        bot.send_message(message.chat.id, "⚠️ Iltimos, kitobni tanlang!")
+        return
+    vocab_states[user_id] = {"book": message.text}
+    user_states[user_id] = "vocab_choose_unit"
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for unit in VOCABULARY[message.text].keys():
+        markup.add(unit)
+    markup.add("⬅️ Orqaga")
+    bot.send_message(
+        message.chat.id,
+        f"📖 *{message.text}* — qaysi unitni o'rganmoqchisiz?",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
+
+# ==================== SO'Z O'RGANISH: UNIT TANLASH ====================
+@bot.message_handler(func=lambda m: user_states.get(m.from_user.id) == "vocab_choose_unit")
+def vocab_choose_unit(message):
+    user_id = message.from_user.id
+    if message.text == "⬅️ Orqaga":
+        user_states[user_id] = "vocab_choose_book"
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        for book in VOCABULARY.keys():
+            markup.add(book)
+        markup.add("🏠 Asosiy menyu")
+        bot.send_message(message.chat.id, "📚 Kitobni tanlang:", reply_markup=markup)
+        return
+    book = vocab_states[user_id]["book"]
+    if message.text not in VOCABULARY[book]:
+        bot.send_message(message.chat.id, "⚠️ Iltimos, unitni tanlang!")
+        return
+    words = VOCABULARY[book][message.text]
+    vocab_states[user_id].update({
+        "unit": message.text,
+        "words": words,
+        "index": 0
+    })
+    user_states[user_id] = "vocab_learning"
+    show_vocab_word(user_id, message.chat.id)
+
+# ==================== SO'Z O'RGANISH: SO'Z KO'RSATISH ====================
+def show_vocab_word(user_id, chat_id):
+    state = vocab_states[user_id]
+    words = state["words"]
+    idx = state["index"]
+    total = len(words)
+
+    if idx >= total:
+        # Barcha so'zlar tugadi
+        book = state["book"]
+        unit = state["unit"]
+        db = load_db()
+        uid = str(user_id)
+        if "vocab_progress" not in db:
+            db["vocab_progress"] = {}
+        if uid not in db["vocab_progress"]:
+            db["vocab_progress"][uid] = {}
+        key = f"{book}|{unit}"
+        db["vocab_progress"][uid][key] = True
+        save_db(db)
+        name = get_name(user_id)
+        user_states.pop(user_id, None)
+        vocab_states.pop(user_id, None)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add("📖 So'z o'rganish", "🏠 Asosiy menyu")
+        bot.send_message(
+            chat_id,
+            f"🎉 *{name}*, *{unit}* unitidagi barcha so'zlarni tugatdingiz!\n\n"
+            f"✅ Jami: *{total}* ta so'z o'rgandingiz!\n\n"
+            f"Boshqa unit tanlaysizmi?",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+        return
+
+    eng, uzb = words[idx]
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("✅ Yodladim", "🔄 Qayta ko'raman")
+    markup.add("⏭ O'tkazib yuborish", "❌ Chiqish")
+
+    bot.send_message(
+        chat_id,
+        f"📖 *{state['book']}* — *{state['unit']}*\n"
+        f"━━━━━━━━━━━━━━━━\n"
+        f"📝 So'z: *{eng}*\n"
+        f"━━━━━━━━━━━━━━━━\n"
+        f"📊 {idx + 1} / {total}",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
+
+# ==================== SO'Z O'RGANISH: JAVOB QAYTA ISHLASH ====================
+@bot.message_handler(func=lambda m: user_states.get(m.from_user.id) == "vocab_learning")
+def vocab_answer(message):
+    user_id = message.from_user.id
+    state = vocab_states.get(user_id)
+    if not state:
+        return
+
+    if message.text == "❌ Chiqish":
+        user_states.pop(user_id, None)
+        vocab_states.pop(user_id, None)
+        bot.send_message(message.chat.id, "Asosiy menyu:", reply_markup=main_menu(user_id))
+        return
+
+    words = state["words"]
+    idx = state["index"]
+    eng, uzb = words[idx]
+
+    if message.text == "✅ Yodladim":
+        bot.send_message(
+            message.chat.id,
+            f"✅ *{eng}* = *{uzb}*\n\nBravo! Keyingi so'z 👇",
+            parse_mode="Markdown"
+        )
+        state["index"] += 1
+        show_vocab_word(user_id, message.chat.id)
+
+    elif message.text == "🔄 Qayta ko'raman":
+        bot.send_message(
+            message.chat.id,
+            f"🔄 *{eng}* = *{uzb}*\n\nEslab qoling! Keyingi so'z keladi 👇",
+            parse_mode="Markdown"
+        )
+        # So'zni oxiriga surish
+        state["words"].append(state["words"].pop(idx))
+        show_vocab_word(user_id, message.chat.id)
+
+    elif message.text == "⏭ O'tkazib yuborish":
+        state["index"] += 1
+        show_vocab_word(user_id, message.chat.id)
+
+# ==================== 🏠 ASOSIY MENYU TUGMASI ====================
+@bot.message_handler(func=lambda m: m.text == "🏠 Asosiy menyu")
+def go_main_menu(message):
+    user_id = message.from_user.id
+    user_states.pop(user_id, None)
+    vocab_states.pop(user_id, None)
+    bot.send_message(message.chat.id, "🏠 Asosiy menyu:", reply_markup=main_menu(user_id))
 
 # ==================== PROFIL ====================
 @bot.message_handler(func=lambda m: m.text == "ℹ️ Profil")
@@ -529,9 +765,12 @@ def show_profile(message):
         return
     u = db["users"][uid]
     role_text = "Admin" if u.get("role") == "admin" else "O'quvchi"
-    today = str(date.today())
     attendance_count = len(db.get("attendance", {}).get(uid, []))
     results_count = len(db.get("results", {}).get(uid, []))
+
+    # O'rganilgan unitlar soni
+    vocab_done = len(db.get("vocab_progress", {}).get(uid, {}))
+
     bot.send_message(
         message.chat.id,
         f"👤 *Profilingiz:*\n\n"
@@ -540,7 +779,8 @@ def show_profile(message):
         f"📞 Tel: {u['phone']}\n"
         f"🎖 Role: {role_text}\n\n"
         f"✅ Davomat: {attendance_count} kun\n"
-        f"📝 Topshirilgan testlar: {results_count} ta",
+        f"📝 Topshirilgan testlar: {results_count} ta\n"
+        f"📖 Tugatilgan unitlar: {vocab_done} ta",
         parse_mode="Markdown"
     )
 
