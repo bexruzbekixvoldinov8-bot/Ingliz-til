@@ -22,7 +22,7 @@ def run_server():
 
 # ==================== SOZLAMALAR ====================
 BOT_TOKEN = "7963263075:AAFy0uOwjihtt2YOSy0bZmjXu5CpdVTtfRQ"
-ADMIN_IDS = [7384088509, 0]  # <-- 2-chi admin ID ni shu yerga qo'ying (0 ni o'rniga)
+ADMIN_IDS = [7384088509, 533170952]  # <-- 2-chi admin ID ni shu yerga qo'ying (0 ni o'rniga)
 ADMIN_PASSWORD = "2026"
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None)
