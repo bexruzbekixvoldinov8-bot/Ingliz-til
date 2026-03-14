@@ -22,8 +22,9 @@ def run_server():
 
 # ==================== SOZLAMALAR ====================
 BOT_TOKEN = "7963263075:AAFy0uOwjihtt2YOSy0bZmjXu5CpdVTtfRQ"
-ADMIN_IDS = [7384088509, 533170952]  # <-- 2-chi admin ID ni shu yerga qo'ying (0 ni o'rniga)
+ADMIN_IDS = [7384088509, 533170952]
 ADMIN_PASSWORD = "2026"
+DAILY_PRICE = 25000  # so'm
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None)
 telebot.logger.setLevel("ERROR")
@@ -127,7 +128,7 @@ def load_db():
                 return json.load(f)
             except:
                 pass
-    return {"users": {}, "tests": [], "results": {}, "attendance": {}, "homeworks": {}, "vocab_progress": {}}
+    return {"users": {}, "tests": [], "results": {}, "attendance": {}, "homeworks": {}, "vocab_progress": {}, "payments": {}}
 
 def save_db(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
@@ -159,11 +160,13 @@ def main_menu(user_id):
     if is_admin(user_id):
         markup.add("👨‍🏫 O'qituvchilar", "👨‍🎓 O'quvchilar ro'yxati")
         markup.add("📊 Statistika", "📝 Yangi Test qo'shish")
-        markup.add("📥 Kelgan Uy vazifalari")
+        markup.add("📥 Kelgan Uy vazifalari", "💰 To'lovlar")
+        markup.add("📣 Hammaga xabar yuborish")
     else:
         markup.add("📝 Test yechish", "📊 Natijalarim")
         markup.add("✅ Keldim", "📚 Uy vazifa topshirish")
-        markup.add("📖 So'z o'rganish", "ℹ️ Profil")
+        markup.add("📖 So'z o'rganish", "💳 To'lov qildim")
+        markup.add("ℹ️ Profil")
     return markup
 
 # ==================== START ====================
@@ -782,6 +785,267 @@ def show_profile(message):
         f"📝 Topshirilgan testlar: {results_count} ta\n"
         f"📖 Tugatilgan unitlar: {vocab_done} ta",
         parse_mode="Markdown"
+    )
+
+# ==================== O'QUVCHI: TO'LOV QILDIM ====================
+@bot.message_handler(func=lambda m: m.text == "💳 To'lov qildim")
+def student_payment(message):
+    user_id = message.from_user.id
+    name = get_name(user_id)
+    db = load_db()
+    uid = str(user_id)
+
+    # Kelgan kunlar sonini hisoblash
+    attendance_days = len(db.get("attendance", {}).get(uid, []))
+    total_debt = attendance_days * DAILY_PRICE
+
+    # To'langan summa
+    paid_total = sum(
+        p["amount"] for p in db.get("payments", {}).get(uid, [])
+        if p.get("status") == "confirmed"
+    )
+    remaining = max(0, total_debt - paid_total)
+
+    user_states[user_id] = "waiting_payment_amount"
+    bot.send_message(
+        message.chat.id,
+        f"💳 *{name}*, to'lov ma'lumotlari:\n\n"
+        f"📅 Kelgan kunlar: *{attendance_days}* kun\n"
+        f"💰 Kunlik narx: *{DAILY_PRICE:,}* so'm\n"
+        f"📊 Jami to'lov: *{total_debt:,}* so'm\n"
+        f"✅ To'langan: *{paid_total:,}* so'm\n"
+        f"❗ Qoldiq: *{remaining:,}* so'm\n\n"
+        f"Qancha pul to'laganingizni kiriting (so'mda):",
+        parse_mode="Markdown",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+
+@bot.message_handler(func=lambda m: user_states.get(m.from_user.id) == "waiting_payment_amount")
+def payment_amount_received(message):
+    user_id = message.from_user.id
+    name = get_name(user_id)
+    try:
+        amount = int(message.text.replace(" ", "").replace(",", ""))
+        if amount <= 0:
+            raise ValueError
+    except:
+        bot.send_message(message.chat.id, "⚠️ Iltimos, faqat raqam kiriting (masalan: 75000)")
+        return
+
+    db = load_db()
+    uid = str(user_id)
+    today = str(date.today())
+
+    if "payments" not in db:
+        db["payments"] = {}
+    if uid not in db["payments"]:
+        db["payments"][uid] = []
+
+    payment_id = f"{uid}_{today}_{len(db['payments'][uid])}"
+    db["payments"][uid].append({
+        "id": payment_id,
+        "amount": amount,
+        "date": today,
+        "status": "pending"
+    })
+    save_db(db)
+
+    user_states.pop(user_id, None)
+
+    # Adminlarga xabar yuborish
+    for admin_id in ADMIN_IDS:
+        try:
+            markup = types.InlineKeyboardMarkup()
+            markup.add(
+                types.InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"pay_confirm_{uid}_{payment_id}"),
+                types.InlineKeyboardButton("❌ Rad etish", callback_data=f"pay_reject_{uid}_{payment_id}")
+            )
+            bot.send_message(
+                admin_id,
+                f"💳 *Yangi to'lov so'rovi!*\n\n"
+                f"👤 O'quvchi: *{name}*\n"
+                f"💰 Summa: *{amount:,}* so'm\n"
+                f"📅 Sana: {today}\n\n"
+                f"Tasdiqlaysizmi?",
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+        except:
+            pass
+
+    bot.send_message(
+        message.chat.id,
+        f"✅ *{name}*, to'lov so'rovingiz adminga yuborildi!\n\n"
+        f"💰 Summa: *{amount:,}* so'm\n"
+        f"⏳ Admin tasdiqlashini kuting...",
+        parse_mode="Markdown",
+        reply_markup=main_menu(user_id)
+    )
+
+# ==================== ADMIN: TO'LOV TASDIQLASH (CALLBACK) ====================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("pay_"))
+def payment_callback(call):
+    parts = call.data.split("_")
+    action = parts[1]       # confirm yoki reject
+    uid = parts[2]          # user id
+    payment_id = "_".join(parts[3:])
+
+    db = load_db()
+    user_payments = db.get("payments", {}).get(uid, [])
+    payment = next((p for p in user_payments if p["id"] == payment_id), None)
+
+    if not payment:
+        bot.answer_callback_query(call.id, "To'lov topilmadi!")
+        return
+
+    if payment["status"] != "pending":
+        bot.answer_callback_query(call.id, "Bu to'lov allaqachon ko'rib chiqilgan!")
+        return
+
+    name = db["users"].get(uid, {}).get("name", "Noma'lum")
+    amount = payment["amount"]
+
+    if action == "confirm":
+        payment["status"] = "confirmed"
+        save_db(db)
+
+        # To'langan va qoldiq hisoblash
+        attendance_days = len(db.get("attendance", {}).get(uid, []))
+        total_debt = attendance_days * DAILY_PRICE
+        paid_total = sum(p["amount"] for p in db["payments"].get(uid, []) if p.get("status") == "confirmed")
+        remaining = max(0, total_debt - paid_total)
+
+        bot.edit_message_text(
+            f"✅ *To'lov tasdiqlandi!*\n\n"
+            f"👤 O'quvchi: *{name}*\n"
+            f"💰 Summa: *{amount:,}* so'm\n"
+            f"📅 Sana: {payment['date']}",
+            call.message.chat.id,
+            call.message.message_id,
+            parse_mode="Markdown"
+        )
+        try:
+            bot.send_message(
+                int(uid),
+                f"✅ *To'lovingiz tasdiqlandi!*\n\n"
+                f"💰 Tasdiqlangan summa: *{amount:,}* so'm\n"
+                f"📊 Umumiy to'lov: *{paid_total:,}* so'm\n"
+                f"❗ Qoldiq qarz: *{remaining:,}* so'm",
+                parse_mode="Markdown"
+            )
+        except:
+            pass
+
+    elif action == "reject":
+        payment["status"] = "rejected"
+        save_db(db)
+        bot.edit_message_text(
+            f"❌ *To'lov rad etildi!*\n\n"
+            f"👤 O'quvchi: *{name}*\n"
+            f"💰 Summa: *{amount:,}* so'm",
+            call.message.chat.id,
+            call.message.message_id,
+            parse_mode="Markdown"
+        )
+        try:
+            bot.send_message(
+                int(uid),
+                f"❌ *To'lovingiz rad etildi!*\n\n"
+                f"💰 Summa: *{amount:,}* so'm\n\n"
+                f"Iltimos, admin bilan bog'laning.",
+                parse_mode="Markdown"
+            )
+        except:
+            pass
+
+    bot.answer_callback_query(call.id)
+
+# ==================== ADMIN: TO'LOVLAR RO'YXATI ====================
+@bot.message_handler(func=lambda m: m.text == "💰 To'lovlar")
+def admin_payments(message):
+    if not is_admin(message.from_user.id):
+        return
+    db = load_db()
+    payments = db.get("payments", {})
+
+    text = "💰 *Barcha to'lovlar:*\n\n"
+    total_confirmed = 0
+    total_pending = 0
+    has_any = False
+
+    for uid, pay_list in payments.items():
+        user_name = db["users"].get(uid, {}).get("name", "Noma'lum")
+        attendance_days = len(db.get("attendance", {}).get(uid, []))
+        total_debt = attendance_days * DAILY_PRICE
+        paid = sum(p["amount"] for p in pay_list if p.get("status") == "confirmed")
+        pending = sum(p["amount"] for p in pay_list if p.get("status") == "pending")
+        remaining = max(0, total_debt - paid)
+
+        if pay_list:
+            has_any = True
+            text += (
+                f"👤 *{user_name}*\n"
+                f"   📅 {attendance_days} kun | Jami: {total_debt:,} so'm\n"
+                f"   ✅ To'langan: {paid:,} so'm\n"
+                f"   ⏳ Kutilmoqda: {pending:,} so'm\n"
+                f"   ❗ Qoldiq: {remaining:,} so'm\n\n"
+            )
+            total_confirmed += paid
+            total_pending += pending
+
+    if not has_any:
+        bot.send_message(message.chat.id, "💭 Hali hech qanday to'lov yo'q.", reply_markup=main_menu(message.from_user.id))
+        return
+
+    text += f"━━━━━━━━━━━━━━━━\n"
+    text += f"✅ Jami tasdiqlangan: *{total_confirmed:,}* so'm\n"
+    text += f"⏳ Jami kutilmoqda: *{total_pending:,}* so'm"
+
+    bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=main_menu(message.from_user.id))
+
+# ==================== ADMIN: HAMMAGA XABAR ====================
+@bot.message_handler(func=lambda m: m.text == "📣 Hammaga xabar yuborish")
+def broadcast_start(message):
+    if not is_admin(message.from_user.id):
+        return
+    user_states[message.from_user.id] = "waiting_broadcast"
+    bot.send_message(
+        message.chat.id,
+        "📣 *Yubormoqchi bo'lgan xabaringizni kiriting:*\n\n"
+        "(Barcha o'quvchilarga yuboriladi)",
+        parse_mode="Markdown",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+
+@bot.message_handler(func=lambda m: user_states.get(m.from_user.id) == "waiting_broadcast")
+def broadcast_send(message):
+    admin_id = message.from_user.id
+    if not is_admin(admin_id):
+        return
+    user_states.pop(admin_id, None)
+    db = load_db()
+    students = [(uid, u) for uid, u in db["users"].items() if u.get("role") == "student"]
+
+    sent = 0
+    failed = 0
+    for uid, u in students:
+        try:
+            bot.send_message(
+                int(uid),
+                f"📣 *Admin xabari:*\n\n{message.text}",
+                parse_mode="Markdown"
+            )
+            sent += 1
+        except:
+            failed += 1
+
+    bot.send_message(
+        message.chat.id,
+        f"✅ Xabar yuborildi!\n\n"
+        f"📨 Yuborildi: *{sent}* ta\n"
+        f"❌ Yuborilmadi: *{failed}* ta",
+        parse_mode="Markdown",
+        reply_markup=main_menu(admin_id)
     )
 
 # ==================== MAIN ====================
